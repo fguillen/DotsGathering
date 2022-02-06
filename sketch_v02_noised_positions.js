@@ -58,15 +58,6 @@ class Utils {
   static randomNoise(offset) {
     return map(Math.random(), 0, 1, -offset, offset);
   }
-
-  static shuffleArray(array) {
-    for (var i = array.length - 1; i > 0; i--) {
-        var j = Math.floor(Math.random() * (i + 1));
-        var temp = array[i];
-        array[i] = array[j];
-        array[j] = temp;
-    }
-  }
 }
 
 class Dot {
@@ -82,19 +73,17 @@ class Dot {
 
   generateNeighbors() {
     var neighbors = [];
-    var neighborsConf = [
-      { rackOffsets: createVector(1, 1), angleIndex: 0},
-      { rackOffsets: createVector(1, 0), angleIndex: 1},
-      { rackOffsets: createVector(0, -1), angleIndex: 2},
-      { rackOffsets: createVector(-1, -1), angleIndex: 3},
-      { rackOffsets: createVector(-1, 0), angleIndex: 4},
-      { rackOffsets: createVector(0, 1), angleIndex: 5}
+    var rackOffsets = [
+      createVector(1, 1),
+      createVector(1, 0),
+      createVector(0, -1),
+      createVector(-1, -1),
+      createVector(-1, 0),
+      createVector(0, 1),
     ]
 
-    Utils.shuffleArray(neighborsConf) // to prevent position noise patterns
-
     for (let index = 0; index < 6; index++) {
-      const rackPosition = this.rackPosition.copy().add(neighborsConf[index].rackOffsets);
+      const rackPosition = this.rackPosition.copy().add(rackOffsets[index]);
       console.log(`rackPosition [${index}]: ` + rackPosition);
 
       if(
@@ -104,7 +93,7 @@ class Dot {
         console.log(`Checking rack[${rackPosition.y}, ${rackPosition.x}]: `, rack[rackPosition.y][rackPosition.x]);
 
         if(rack[rackPosition.y][rackPosition.x] == null) {
-          const angle = ((TWO_PI / 6) * neighborsConf[index].angleIndex) + (TWO_PI / 12);
+          const angle = ((TWO_PI / 6) * index) + (TWO_PI / 12);
           const position = createVector(this.position.x + (sin(angle) * DOTS_DISTANCE), this.position.y + (cos(angle) * DOTS_DISTANCE));
           console.log("originalPosition: " + position);
           const noisePosition = Utils.vectorRandomNoise(1);
