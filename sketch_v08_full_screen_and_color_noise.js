@@ -9,9 +9,9 @@ var dotsDistance;
 var dotsRadius;
 var noiseScale;
 
-var padding = 100;
-var rackWidth = 40;
-var rackHeight = 10;
+const PADDING = -10;
+const RACK_WIDTH = 30;
+const RACK_HEIGHT = 35;
 
 
 function setup() {
@@ -20,31 +20,27 @@ function setup() {
   colorMode(HSB, 360, 100, 100, 1);
   frameRate(10);
 
-  padding = 50;
-  rackWidth = Math.floor((width - (padding * 2)) * 0.04);
-  rackHeight = Math.floor((height - (padding * 2)) * 0.0475);
-
-  dotsDistance = (width - (padding * 2)) / rackWidth;
+  dotsDistance = (width - (PADDING * 2)) / RACK_WIDTH;
   dotsRadius = dotsDistance * 0.7;
   noiseScale = dotsRadius / 32;
 
-  dots = new Array(rackWidth * rackHeight);
-  rack = new Array(rackHeight);
+  dots = new Array(RACK_WIDTH * RACK_WIDTH);
+  rack = new Array(RACK_HEIGHT);
   blendModeCode = BLEND; // MULTIPLY;
 
-  noiseEllipse = new NoiseGenerator(2 * noiseScale, 0.1 * noiseScale);
-  noiseSize = new NoiseGenerator(4 * noiseScale, 0.1 * noiseScale);
-  noiseColor = new NoiseGenerator(15 * noiseScale, 0.1);
+  noiseEllipse = new NoiseGeneratorPointsPosition(2 * noiseScale, 0.1);
+  noiseSize = new NoiseGeneratorPointsPosition(4 * noiseScale, 0.1 * noiseScale);
+  noiseColor = new NoiseGeneratorPointsPosition(15 * noiseScale, 0.0001 * noiseScale);
   noisePositionOffset = 1 * noiseScale;
-  noiseDrawingPosition = new NoiseGenerator(10 * noiseScale, 0.1 * noiseScale);
+  noiseDrawingPosition = new NoiseGeneratorPointsPosition(10 * noiseScale, 0.1 * noiseScale);
 
   for (let index = 0; index < rack.length; index++) {
-    rack[index] = new Array(rackWidth);
+    rack[index] = new Array(RACK_WIDTH);
   }
 
 
   // Generate Dots
-  generateFirstDot(createVector(0, 0), createVector(padding, padding));
+  generateFirstDot(createVector(0, 0), createVector(PADDING, PADDING));
 
   // noLoop();
 }
@@ -104,7 +100,7 @@ class Utils {
     return result;
   };
 
-  static drawNoisedEllipse(position, points, hight, width, angle, noiseSeed, color, blendModeCode, noiseGeneratorSize, noiseGenerator){
+  static drawNoisedEllipse(position, points, hight, width, angle, noiseSeed, color, blendModeCode, noiseGeneratorSize, noiseGeneratorPointsPosition){
     let angleStep = TWO_PI / points;
     let curvePoints = new Array(points);
     let index = 0;
@@ -115,7 +111,7 @@ class Utils {
 
     // Calculate points
     for (let i = 0; i < TWO_PI; i += angleStep) {
-      let noisePosition = noiseGenerator.getVector(frameCount + noiseSeed + (i * 1000));
+      let noisePosition = noiseGeneratorPointsPosition.getVector(frameCount + noiseSeed + (i * 1000));
       let sx = (cos(i) * hight) + noisePosition.x;
       let sy = (sin(i) * width) + noisePosition.y;
 
@@ -143,7 +139,7 @@ class Utils {
   }
 }
 
-class NoiseGenerator {
+class NoiseGeneratorPointsPosition {
   constructor(scale, speed, seed = "") {
     this.scale = scale;
     this.speed = speed;
@@ -177,31 +173,14 @@ class Dot {
 
   generateNeighbors() {
     var neighbors = [];
-    var neighborsConf;
-
-    // rack has hexagonal tiles
-    // If the row is even the neighbors rack indexes have one configuration
-    if(this.rackPosition.y % 2 == 0){
-      neighborsConf = [
-        { rackOffsets: createVector(1, 1), angleIndex: 0},
-        { rackOffsets: createVector(1, 0), angleIndex: 1},
-        { rackOffsets: createVector(+1, -1), angleIndex: 2},
-        { rackOffsets: createVector(0, -1), angleIndex: 3},
-        { rackOffsets: createVector(-1, 0), angleIndex: 4},
-        { rackOffsets: createVector(0, 1), angleIndex: 5}
-      ]
-
-    // If the row is even the neighbors rack indexes have *another* configuration
-    } else {
-      neighborsConf = [
-        { rackOffsets: createVector(0, 1), angleIndex: 0},
-        { rackOffsets: createVector(1, 0), angleIndex: 1},
-        { rackOffsets: createVector(0, -1), angleIndex: 2},
-        { rackOffsets: createVector(-1, -1), angleIndex: 3},
-        { rackOffsets: createVector(-1, 0), angleIndex: 4},
-        { rackOffsets: createVector(-1, 1), angleIndex: 5}
-      ]
-    }
+    var neighborsConf = [
+      { rackOffsets: createVector(1, 1), angleIndex: 0},
+      { rackOffsets: createVector(1, 0), angleIndex: 1},
+      { rackOffsets: createVector(0, -1), angleIndex: 2},
+      { rackOffsets: createVector(-1, -1), angleIndex: 3},
+      { rackOffsets: createVector(-1, 0), angleIndex: 4},
+      { rackOffsets: createVector(0, 1), angleIndex: 5}
+    ]
 
     Utils.shuffleArray(neighborsConf) // to prevent position noise patterns
 
@@ -209,8 +188,8 @@ class Dot {
       const rackPosition = this.rackPosition.copy().add(neighborsConf[index].rackOffsets);
 
       if(
-        (rackPosition.x >= 0 && rackPosition.x < rackWidth) &&
-        (rackPosition.y >= 0 && rackPosition.y < rackHeight)
+        (rackPosition.x >= 0 && rackPosition.x < RACK_WIDTH) &&
+        (rackPosition.y >= 0 && rackPosition.y < RACK_HEIGHT)
       ) {
         if(rack[rackPosition.y][rackPosition.x] == null) {
           const angle = ((TWO_PI / 6) * neighborsConf[index].angleIndex) + (TWO_PI / 12);
@@ -229,19 +208,18 @@ class Dot {
 
   draw() {
     var _color = color(201, 60, 80);
-    const noiseSeed = (this.rackPosition.x + (this.rackPosition.y * rackWidth)) * 1000;
+    const noiseSeed = (this.rackPosition.x + (this.rackPosition.y * RACK_WIDTH)) * 1000;
     const noisedPosition = noiseDrawingPosition.getVector(frameCount + noiseSeed);
-    const noisedColor = noiseColor.get(frameCount + noiseSeed);
+    const noisedColor = noiseColor.get(frameCount * noiseSeed);
 
     _color = color(hue(_color), saturation(_color), brightness(_color) + noisedColor);
 
 
     noisedPosition.add(this.position);
 
-    // // Borders round robin
-    // if(noisedPosition.x < padding) {
-    //   noisedPosition.x = width - padding - (padding - noisedPosition.x);
-    // }
+    if(noisedPosition.x < PADDING) {
+      noisedPosition.x = width - PADDING - (PADDING - noisedPosition.x);
+    }
 
     Utils.drawNoisedEllipse(noisedPosition, 10, dotsRadius / 2, dotsRadius / 2, 0, noiseSeed, _color, blendModeCode, noiseSize, noiseEllipse);
     // fill("purple")
