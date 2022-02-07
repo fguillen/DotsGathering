@@ -1,20 +1,24 @@
-var dots;
-var rack;
+var dots; // All the generated Dots
+var rack; // The rack to keep track of which tiles/dots have been generated
+
+// Perlin Noise Generators
 var noiseEllipse;
 var noiseSize;
 var noisePosition;
 var noiseTimeBetweenDots;
-var blendModeCode;
 
+// Some settings
+var blendModeCode;
 var dotsDistance;
 var dotsRadius;
 var noiseScale;
-
-var padding = 10;
-var rackWidth = 40;
-var rackHeight = 10;
+var padding;
+var rackWidth;
+var rackHeight;
 
 var p5Div;
+
+// For the incremental dots addition animation
 var drawnDotIndex = 0;
 var timeBetweenDrawnDots = 0.01;
 var nextDrawnDotAt;
@@ -27,18 +31,24 @@ function setup() {
   colorMode(HSB, 360, 100, 100, 1);
   frameRate(10);
 
+  // Dimensions calculations
   padding = 25;
   rackWidth = Math.floor((width - (padding * 2)) * 0.04);
   rackHeight = Math.floor((height - (padding * 2)) * 0.0475);
-
   dotsDistance = (width - (padding * 2)) / rackWidth;
   dotsRadius = dotsDistance * 0.7;
   noiseScale = dotsRadius / 32;
 
+  // Init Arrays
   dots = [];
   rack = new Array(rackHeight);
+  for (let index = 0; index < rack.length; index++) {
+    rack[index] = new Array(rackWidth);
+  }
+
   blendModeCode = BLEND; // MULTIPLY;
 
+  // Init Noise Generators
   noiseEllipse = new NoiseGenerator(2 * noiseScale, 0.1 * noiseScale);
   noiseSize = new NoiseGenerator(4 * noiseScale, 0.1 * noiseScale);
   noiseColor = new NoiseGenerator(15 * noiseScale, 0.1);
@@ -46,15 +56,11 @@ function setup() {
   noiseDrawingPosition = new NoiseGenerator(10 * noiseScale, 0.1 * noiseScale);
   noiseTimeBetweenDots = new NoiseGenerator(0.5, 1);
 
-  for (let index = 0; index < rack.length; index++) {
-    rack[index] = new Array(rackWidth);
-  }
-
 
   // Generate Dots
   generateFirstDot(createVector(0, 0), createVector(padding, padding));
 
-  // Set up timer
+  // Set up dots addition timer
   nextDrawnDotAt = Date.now();
 
   // noLoop();
@@ -75,10 +81,10 @@ function draw() {
 
 function generateFirstDot(rackPosition, position) {
   const dot = new Dot(rackPosition, position, 0);
-  rack[0][0] = dot;
   dot.generateNeighbors();
 }
 
+// Utils library
 class Utils {
   static vectorNoise(noisePosition, offset) {
     const velocity = 0;
@@ -121,6 +127,7 @@ class Utils {
     return result;
   };
 
+  // Draws an ellipse/circle but with some degree of deformation
   static drawNoisedEllipse(position, points, hight, width, angle, noiseSeed, color, blendModeCode, noiseGeneratorSize, noiseGenerator){
     let angleStep = TWO_PI / points;
     let curvePoints = new Array(points);
@@ -148,17 +155,19 @@ class Utils {
     translate(position.x, position.y);
     rotate(angle);
     beginShape();
-    curveVertex(curvePoints[curvePoints.length-1].x, curvePoints[curvePoints.length-1].y);
 
+    curveVertex(curvePoints[curvePoints.length-1].x, curvePoints[curvePoints.length-1].y);
     for (let i = 0; i < curvePoints.length; i++) {
       curveVertex(curvePoints[i].x, curvePoints[i].y);
     }
     curveVertex(curvePoints[0].x, curvePoints[0].y);
     curveVertex(curvePoints[1].x, curvePoints[1].y);
+
     endShape();
     pop();
   }
 
+  // Calculate the Width in pixels of a Dom element
   static elementWidth(element) {
     return (
       element.clientWidth -
@@ -167,6 +176,7 @@ class Utils {
     )
   }
 
+  // Calculate the Height in pixels of a Dom element
   static elementHeight(element) {
     return (
       element.clientHeight -
@@ -176,6 +186,11 @@ class Utils {
   }
 }
 
+// Wrapper over `noise` function
+// Params:
+// - scale: the finale value will be between -scale and scale
+// - speed: how many increments per frame into the noise texture
+// - seed: in case you want to control de initial randomness
 class NoiseGenerator {
   constructor(scale, speed, seed = "") {
     this.scale = scale;
@@ -198,7 +213,11 @@ class NoiseGenerator {
   }
 }
 
+// The Dot class
 class Dot {
+  // - rackPosition: the position in the rack tiles, only used to know what Dots have been generated
+  // - position: the position in the screen
+  // - inception: just for debug
   constructor(rackPosition, position, inception) {
     this.rackPosition = rackPosition;
     this.position = position;
@@ -206,6 +225,7 @@ class Dot {
     this.inception = inception;
 
     dots.push(this);
+    rack[this.rackPosition.y][this.rackPosition.x] = this;
   }
 
   generateNeighbors() {
@@ -241,6 +261,7 @@ class Dot {
     for (let index = 0; index < 6; index++) {
       const rackPosition = this.rackPosition.copy().add(neighborsConf[index].rackOffsets);
 
+      // Only if Dot is not in the rack already
       if(
         (rackPosition.x >= 0 && rackPosition.x < rackWidth) &&
         (rackPosition.y >= 0 && rackPosition.y < rackHeight)
@@ -250,11 +271,15 @@ class Dot {
           const position = createVector(this.position.x + (sin(angle) * dotsDistance), this.position.y + (cos(angle) * dotsDistance));
           const noisePosition = Utils.vectorRandomNoise(noisePositionOffset);
           position.add(noisePosition);
+
+          // generate Dot
           const dot = new Dot(rackPosition, position, this.inception + 1);
-          rack[rackPosition.y][rackPosition.x] = dot;
+
+          // generate Neighbors
           dot.generateNeighbors();
         }
 
+        // The neighbors property is actually not used
         neighbors.push(rack[rackPosition.y][rackPosition.x]);
       }
     }
@@ -262,23 +287,18 @@ class Dot {
 
   draw() {
     var _color = color(201, 60, 80);
+
+    // Unique noise seed per Dot
     const noiseSeed = (this.rackPosition.x + (this.rackPosition.y * rackWidth)) * 1000;
+
+    // Some noise in the position
     const noisedPosition = noiseDrawingPosition.getVector(frameCount + noiseSeed);
-    const noisedColor = noiseColor.get(frameCount + noiseSeed);
-
-    _color = color(hue(_color), saturation(_color), brightness(_color) + noisedColor);
-
-
     noisedPosition.add(this.position);
 
-    // // Borders round robin
-    // if(noisedPosition.x < padding) {
-    //   noisedPosition.x = width - padding - (padding - noisedPosition.x);
-    // }
+    // Some noise in the brightness of the color
+    const noisedColor = noiseColor.get(frameCount + noiseSeed);
+    _color = color(hue(_color), saturation(_color), brightness(_color) + noisedColor);
 
     Utils.drawNoisedEllipse(noisedPosition, 10, dotsRadius / 2, dotsRadius / 2, 0, noiseSeed, _color, blendModeCode, noiseSize, noiseEllipse);
-    // fill("purple")
-    // strokeWeight(dotsRadius / 2);
-    // point(this.position.x, this.position.y);
   }
 }
