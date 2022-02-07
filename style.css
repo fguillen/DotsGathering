@@ -8,3 +8,7 @@
 #p5-div {
   height: 500px;
 }
+
+.hidden {
+  opacity: 0;
+}

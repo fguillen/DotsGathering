@@ -84,6 +84,11 @@ function generateFirstDot(rackPosition, position) {
   dot.generateNeighbors();
 }
 
+function completeIt() {
+  drawnDotIndex = dots.length;
+  document.getElementById("complete-it-button").classList.add("hidden");
+}
+
 // Utils library
 class Utils {
   static vectorNoise(noisePosition, offset) {
