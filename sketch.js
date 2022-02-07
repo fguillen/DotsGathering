@@ -9,14 +9,20 @@ var dotsDistance;
 var dotsRadius;
 var noiseScale;
 
-var padding = 100;
+var padding = 10;
 var rackWidth = 40;
 var rackHeight = 10;
+
+var p5Div;
 
 
 function setup() {
   // createCanvas(WIDTH, HEIGHT);
-  createCanvas(windowWidth, windowHeight);
+  p5Div = document.getElementById("p5-div");
+  console.log("Utils.elementWidth(p5Div): " + Utils.elementWidth(p5Div));
+  console.log("Utils.elementHeight(p5Div): " + Utils.elementHeight(p5Div));
+  const p5Canvas = createCanvas(Utils.elementWidth(p5Div), Utils.elementHeight(p5Div));
+  p5Canvas.parent(p5Div);
   colorMode(HSB, 360, 100, 100, 1);
   frameRate(10);
 
@@ -140,6 +146,22 @@ class Utils {
     curveVertex(curvePoints[1].x, curvePoints[1].y);
     endShape();
     pop();
+  }
+
+  static elementWidth(element) {
+    return (
+      element.clientWidth -
+      parseFloat(window.getComputedStyle(element, null).getPropertyValue("padding-left")) -
+      parseFloat(window.getComputedStyle(element, null).getPropertyValue("padding-right"))
+    )
+  }
+
+  static elementHeight(element) {
+    return (
+      element.clientHeight -
+      parseFloat(window.getComputedStyle(element, null).getPropertyValue("padding-top")) -
+      parseFloat(window.getComputedStyle(element, null).getPropertyValue("padding-bottom"))
+    )
   }
 }
 
